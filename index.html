@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="REEI RAM">
+  <meta name="theme-color" content="#0a1c2e">
+  <title>Planificateur REEI — RAM Québec</title>
+
+  <!-- Manifest PWA inline via JS -->
+  <script>
+    const manifest = {
+      name: "Planificateur REEI — RAM Québec",
+      short_name: "REEI RAM",
+      description: "Calculateur SCEI, BCEI et cotisations REEI — RAM Québec Conseils Fiscaux",
+      start_url: "./",
+      display: "standalone",
+      background_color: "#070c14",
+      theme_color: "#0a1c2e",
+      orientation: "any",
+      icons: [
+        { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%230a1c2e'/%3E%3Crect x='30' y='30' width='452' height='452' rx='60' fill='%230d2238'/%3E%3Cpath d='M80 460 L80 60 L160 60 L160 460 Z' fill='%23c4973e'/%3E%3Cpath d='M80 200 L320 200 Q420 200 420 280 Q420 360 320 360 L160 360 L160 280 L300 280 Q340 280 340 260 Q340 240 300 240 L80 240 Z' fill='%23c4973e'/%3E%3Ctext x='256' y='490' text-anchor='middle' font-family='Georgia' font-size='40' fill='%23c4973e' opacity='0.6'%3EREEI%3C/text%3E%3C/svg%3E", sizes: "512x512", type: "image/svg+xml", purpose: "any maskable" }
+      ]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+    const manifestURL = URL.createObjectURL(blob);
+    document.write('<link rel="manifest" href="' + manifestURL + '">');
+
+    // Apple touch icon
+    const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="80" fill="#0a1c2e"/><rect x="30" y="30" width="452" height="452" rx="60" fill="#0d2238"/><path d="M80 460 L80 60 L160 60 L160 460 Z" fill="#c4973e"/><path d="M80 200 L320 200 Q420 200 420 280 Q420 360 320 360 L160 360 L160 280 L300 280 Q340 280 340 260 Q340 240 300 240 L80 240 Z" fill="#c4973e"/><text x="256" y="490" text-anchor="middle" font-family="Georgia" font-size="40" fill="#c4973e" opacity="0.6">REEI</text></svg>`;
+    const iconBlob = new Blob([svgIcon], {type: 'image/svg+xml'});
+    const iconURL = URL.createObjectURL(iconBlob);
+    document.write('<link rel="apple-touch-icon" href="' + iconURL + '">');
+  </script>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { background: #070c14; overscroll-behavior: none; }
+    input[type=range] { -webkit-appearance: none; appearance: none; height: 5px; border-radius: 3px; outline: none; cursor: pointer; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; cursor: pointer; }
+    input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { opacity: 1; }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-thumb { background: #c4973e44; border-radius: 2px; }
+    /* Banner install iOS */
+    #install-banner { display:none; position:fixed; bottom:0; left:0; right:0; background:#0d2238;
+      border-top:2px solid #c4973e; padding:14px 20px; z-index:9999; font-family:system-ui;
+      flex-direction:column; gap:8px; }
+    #install-banner.show { display:flex; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- Bannière installation iOS -->
+  <div id="install-banner">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div style="color:#c4973e;font-weight:bold;font-size:14px;">📲 Installer l'app REEI RAM</div>
+      <button onclick="document.getElementById('install-banner').classList.remove('show')"
+        style="background:none;border:none;color:#7098b8;font-size:18px;cursor:pointer;">✕</button>
+    </div>
+    <div style="color:#7098b8;font-size:12px;line-height:1.5;">
+      Sur iPhone/iPad : appuyez sur <strong style="color:#c4973e">⎋ Partager</strong> en bas →
+      <strong style="color:#c4973e">Sur l'écran d'accueil</strong>
+    </div>
+  </div>
+
+  <script>
+    // Service Worker pour fonctionnement hors-ligne
+    if ('serviceWorker' in navigator) {
+      const swCode = `
+        const CACHE = 'reei-ram-v1';
+        const ASSETS = [
+          'https://unpkg.com/react@18/umd/react.production.min.js',
+          'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
+          'https://unpkg.com/@babel/standalone/babel.min.js'
+        ];
+        self.addEventListener('install', e => {
+          e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+        });
+        self.addEventListener('fetch', e => {
+          e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+        });
+      `;
+      const swBlob = new Blob([swCode], {type: 'application/javascript'});
+      const swURL = URL.createObjectURL(swBlob);
+      navigator.serviceWorker.register(swURL).catch(()=>{});
+    }
+
+    // Bouton install Android
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      // Afficher bouton install Android (géré dans React)
+      window.androidInstallReady = true;
+    });
+
+    // Détection iOS — afficher bannière
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (isIOS && !isStandalone) {
+      setTimeout(() => {
+        document.getElementById('install-banner').classList.add('show');
+      }, 2000);
+    }
+  </script>
+
+  <script type="text/babel">
+const { useState, useMemo, useCallback, useEffect } = React;
+
+// ─── RÈGLES ARC 2025 ──────────────────────────────────────────────────────────
+const ANNEE        = 2025;
+const SEUIL_BONIF  = 114750;
+const SEUIL_BCEI_1 = 37487;
+const SEUIL_BCEI_2 = 57375;
+const MAX_SCEI_VIE = 70000;
+const MAX_BCEI_VIE = 20000;
+const MAX_SCEI_AN  = 10500;
+const MAX_BCEI_AN  = 11000;
+
+function droits(rev) {
+  return rev <= SEUIL_BONIF ? { r3:500, r2:1000, taux2:2 } : { r3:0, r2:1000, taux2:1 };
+}
+function bceiAn(rev) {
+  if (rev <= SEUIL_BCEI_1) return 1000;
+  if (rev >= SEUIL_BCEI_2) return 0;
+  return Math.round((1 - (rev - SEUIL_BCEI_1)/(SEUIL_BCEI_2 - SEUIL_BCEI_1)) * 1000);
+}
+function calculerRetro(dtc, ageCourant, revs) {
+  const n = Math.min(dtc, 10);
+  const revDef = revs[0] || 35000;
+  let pool3=0, pool2=0, poolBCEI=0;
+  const lignes=[];
+  for (let i=0;i<n;i++) {
+    const annee = ANNEE-n+i;
+    const age = ageCourant-(ANNEE-annee);
+    if (age<0||age>49) { lignes.push({annee,age:null,r3:0,r2:0,bcei:0,scei3:0,scei2:0}); continue; }
+    const d = droits(revDef);
+    pool3+=d.r3; pool2+=d.r2;
+    const b=bceiAn(revDef); poolBCEI+=b;
+    lignes.push({annee,age,r3:d.r3,r2:d.r2,bcei:b,scei3:d.r3*3,scei2:d.r2*d.taux2});
+  }
+  const d=droits(revDef);
+  return { pool3,pool2,poolBCEI:Math.min(poolBCEI,MAX_BCEI_VIE),scei3tot:pool3*3,scei2tot:pool2*d.taux2,lignes };
+}
+function calculerGrants(cotisInput,pool3D,pool2D,taux2,sceiRest) {
+  const c3=Math.min(cotisInput,pool3D,sceiRest/3);
+  const s3=Math.round(c3*3);
+  const bud=Math.min(MAX_SCEI_AN-s3,sceiRest-s3);
+  const c2=Math.min(cotisInput-c3,pool2D,bud/taux2);
+  const s2=Math.round(Math.max(c2,0)*taux2);
+  return {cotis3:Math.round(c3),cotis2:Math.round(Math.max(c2,0)),scei3:s3,scei2:s2};
+}
+function genererPlan(ageCourant,revParAn,retro,annees,modeManuel,cotisManuelle) {
+  let pool3=retro.pool3,pool2=retro.pool2,poolBCEI=retro.poolBCEI;
+  let sceiVie=0,bceiVie=0,cotisCum=0,reeiCum=0;
+  const plan=[];
+  for (let i=0;i<annees;i++) {
+    const annee=ANNEE+i, age=ageCourant+i;
+    const rev=revParAn[i]??revParAn[revParAn.length-1];
+    const d=droits(rev);
+    if (age>49) { plan.push({annee,age,rev,hors:true,cotis:0,cotis3:0,cotis2:0,scei:0,scei3:0,scei2:0,bcei:0,bceiCour:0,bceiReto:0,gvt:0,total:0,cotisCum,reeiCum,pool3:0,pool2:0,levier:0}); continue; }
+    pool3+=d.r3; pool2+=d.r2;
+    const sceiRest=MAX_SCEI_VIE-sceiVie;
+    let cotisInput;
+    if (modeManuel) {
+      cotisInput=cotisManuelle;
+    } else {
+      const oC3=Math.min(pool3,MAX_SCEI_AN/3,sceiRest/3);
+      const bud=Math.min(MAX_SCEI_AN-Math.round(oC3*3),sceiRest-Math.round(oC3*3));
+      cotisInput=Math.round(oC3)+Math.round(Math.max(Math.min(pool2,bud/d.taux2),0));
+    }
+    const {cotis3,cotis2,scei3,scei2}=calculerGrants(cotisInput,pool3,pool2,d.taux2,sceiRest);
+    const cotis=cotis3+cotis2, sceiTot=scei3+scei2;
+    const bceiCour=Math.min(bceiAn(rev),MAX_BCEI_VIE-bceiVie);
+    const bceiReto=Math.min(poolBCEI,Math.max(0,MAX_BCEI_AN-bceiCour),Math.max(0,MAX_BCEI_VIE-bceiVie-bceiCour));
+    const bcei=bceiCour+bceiReto;
+    pool3=Math.max(pool3-cotis3,0); pool2=Math.max(pool2-cotis2,0); poolBCEI=Math.max(poolBCEI-bceiReto,0);
+    sceiVie+=sceiTot; bceiVie+=bcei;
+    const gvt=sceiTot+bcei,total=cotis+gvt;
+    cotisCum+=cotis; reeiCum+=total;
+    plan.push({annee,age,rev,bonif:rev<=SEUIL_BONIF,hors:false,cotis,cotis3,cotis2,scei:sceiTot,scei3,scei2,bceiCour,bceiReto,bcei,gvt,total,cotisCum,reeiCum,pool3:Math.max(pool3,0),pool2:Math.max(pool2,0),levier:cotis>0?gvt/cotis:0});
+    pool3+=d.r3; pool2+=d.r2;
+    pool3-=d.r3; pool2-=d.r2; // annuler le double ajout (déjà fait au début)
+  }
+  return plan;
+}
+
+const $ = n => (n||0).toLocaleString('fr-CA',{maximumFractionDigits:0})+' $';
+const C = {GOLD:'#c4973e',T1:'#b83518',T2:'#1858a0',BCEI:'#4838a0',GVT:'#157050',NAV:'#0a1c2e'};
+
+function Btn({label,onClick,color=C.GOLD,small=false}) {
+  return <button onClick={onClick} style={{
+    flex:1,padding:small?'5px 8px':'8px 4px',borderRadius:6,cursor:'pointer',
+    fontFamily:'system-ui',fontSize:small?10:12,fontWeight:'bold',
+    background:`${color}20`,border:`1px solid ${color}50`,color,touchAction:'manipulation'
+  }} onTouchStart={e=>e.currentTarget.style.background=`${color}40`}
+     onTouchEnd={e=>e.currentTarget.style.background=`${color}20`}
+  >{label}</button>;
+}
+
+function Card({children,style={}}) {
+  return <div style={{background:'rgba(255,255,255,0.05)',border:`1px solid ${C.GOLD}28`,borderRadius:12,padding:'14px',...style}}>{children}</div>;
+}
+
+function App() {
+  const [age,    setAge]    = useState(12);
+  const [dtc,    setDtc]    = useState(10);
+  const [proj,   setProj]   = useState(12);
+  const [tab,    setTab]    = useState('plan');
+  const [manuel, setManuel] = useState(false);
+  const [cotisM, setCotisM] = useState(1500);
+  const [revAns, setRevAns] = useState(() => Array(25).fill(35000));
+  const [androidInstall, setAndroidInstall] = useState(false);
+
+  useEffect(()=>{
+    window.addEventListener('beforeinstallprompt',()=>setAndroidInstall(true));
+  },[]);
+
+  const setRevAn = useCallback((i,val)=>{
+    setRevAns(prev=>{const n=[...prev];n[i]=val;return n;});
+  },[]);
+
+  const retro = useMemo(()=>calculerRetro(dtc,age,revAns),[dtc,age,revAns]);
+  const plan  = useMemo(()=>genererPlan(age,revAns,retro,proj,manuel,cotisM),[age,revAns,retro,proj,manuel,cotisM]);
+
+  const totalCotis = plan.reduce((s,r)=>s+r.cotis,0);
+  const totalGvt   = plan.reduce((s,r)=>s+r.gvt,0);
+  const totalREEI  = plan[plan.length-1]?.reeiCum||0;
+  const levier     = totalCotis>0?totalGvt/totalCotis:0;
+  const an1        = plan[0];
+
+  const TABS = [
+    {k:'plan',  l:'📋 Plan'},
+    {k:'revenu',l:'💰 Revenus'},
+    {k:'retro', l:'⏪ Rétro'},
+    {k:'règles',l:'📖 Règles'},
+  ];
+
+  return (
+    <div style={{minHeight:'100vh',background:'linear-gradient(150deg,#070c14,#0c1620)',color:'#b8c8d8',fontFamily:"'Georgia',serif",paddingBottom:80}}>
+
+      {/* HEADER */}
+      <div style={{background:C.NAV,borderBottom:`2px solid ${C.GOLD}`,padding:'12px 16px',position:'sticky',top:0,zIndex:100}}>
+        <div style={{fontSize:8,letterSpacing:4,color:C.GOLD,fontFamily:'system-ui',marginBottom:1}}>RAM QUÉBEC</div>
+        <div style={{fontSize:17,fontWeight:'bold',color:'#fff'}}>Planificateur REEI</div>
+        <div style={{fontSize:9,color:'#304858',fontFamily:'system-ui',marginTop:2}}>
+          ARC 2025 · Pool ×3 prioritaire · Max 10 500$/an SCEI
+        </div>
+        {androidInstall && (
+          <button onClick={async()=>{
+            if(window.deferredPrompt){await window.deferredPrompt.prompt();setAndroidInstall(false);}
+          }} style={{marginTop:6,padding:'5px 12px',borderRadius:6,background:`${C.GOLD}20`,
+            border:`1px solid ${C.GOLD}`,color:C.GOLD,fontSize:10,fontFamily:'system-ui',cursor:'pointer'}}>
+            📲 Installer l'app
+          </button>
+        )}
+        <button onClick={()=>{
+          const html = document.documentElement.outerHTML;
+          const blob = new Blob([html], {type:'text/html'});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'REEI_RAM_Quebec.html';
+          a.click();
+          URL.revokeObjectURL(url);
+        }} style={{
+          marginTop:6, marginLeft:8, padding:'5px 14px', borderRadius:6, cursor:'pointer',
+          background:'rgba(29,112,80,0.2)', border:'1px solid #1d7050',
+          color:'#2d9060', fontSize:10, fontFamily:'system-ui', fontWeight:'bold',
+          display:'inline-flex', alignItems:'center', gap:4
+        }}>
+          ⬇ Sauvegarder l'app
+        </button>
+      </div>
+
+      <div style={{padding:'12px 14px',maxWidth:900,margin:'0 auto'}}>
+
+        {/* PARAMÈTRES */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12}}>
+          {[
+            {label:'Âge',val:age,set:setAge,max:59,unit:'ans',
+              btns:[[-1,'−1'],[1,'+1'],[-5,'−5'],[5,'+5']],
+              note:age<=18?'Revenu parental':age>49?'⚠ Hors limite':'Revenu propre'},
+            {label:'Années CIPH',val:dtc,set:setDtc,max:10,unit:'ans',
+              btns:[[-1,'−1'],[1,'+1']],
+              note:`Rétro : ${$(retro.pool3*3+retro.pool2*droits(revAns[0]).taux2)}`},
+            {label:'Projection',val:proj,set:setProj,min:1,max:25,unit:'ans',
+              btns:[[-1,'−1'],[1,'+1'],[-5,'−5'],[5,'+5']],
+              note:`Jusqu'en ${ANNEE+proj-1}`},
+            {label:'Mode',val:null,set:null,unit:'',btns:[],note:''},
+          ].map((f,i)=> i===3 ? (
+            <Card key={i}>
+              <div style={{fontSize:9,color:'#406078',fontFamily:'system-ui',marginBottom:8}}>Mode de cotisation</div>
+              <div style={{display:'flex',gap:6,marginBottom:10}}>
+                {[['Optimisé',false],['Manuel',true]].map(([l,v])=>(
+                  <button key={l} onClick={()=>setManuel(v)} style={{
+                    flex:1,padding:'8px',borderRadius:8,cursor:'pointer',fontFamily:'system-ui',fontSize:11,fontWeight:'bold',
+                    background:manuel===v?C.GOLD:'rgba(255,255,255,0.06)',
+                    border:`1px solid ${manuel===v?C.GOLD:'rgba(255,255,255,0.12)'}`,
+                    color:manuel===v?'#1a1a1a':'#7098b8'
+                  }}>{l}</button>
+                ))}
+              </div>
+              {manuel && <>
+                <div style={{fontSize:9,color:C.T1,fontFamily:'system-ui',marginBottom:4}}>Cotisation annuelle</div>
+                <div style={{display:'flex',gap:4,marginBottom:6}}>
+                  {[[-1000,'−1k'],[-500,'−500'],[500,'+500'],[1000,'+1k']].map(([d,l])=>(
+                    <Btn key={l} label={l} color={C.T1} small onClick={()=>setCotisM(v=>Math.max(0,Math.min(15000,v+d)))}/>
+                  ))}
+                </div>
+                <div style={{fontSize:18,fontWeight:'bold',color:C.T1,textAlign:'center'}}>{$(cotisM)}</div>
+                <input type="range" min={0} max={15000} step={100} value={cotisM}
+                  onChange={e=>setCotisM(+e.target.value)}
+                  style={{width:'100%',accentColor:C.T1,marginTop:6}}/>
+              </>}
+            </Card>
+          ) : (
+            <Card key={i}>
+              <div style={{fontSize:9,color:'#406078',fontFamily:'system-ui',marginBottom:6}}>{f.label}</div>
+              <div style={{fontSize:22,fontWeight:'bold',color:C.GOLD,textAlign:'center',marginBottom:8}}>{f.val} {f.unit}</div>
+              <div style={{display:'grid',gridTemplateColumns:`repeat(${f.btns.length},1fr)`,gap:4,marginBottom:6}}>
+                {f.btns.map(([d,l])=><Btn key={l} label={l} onClick={()=>f.set(v=>Math.max(f.min||0,Math.min(f.max,v+d)))} small/>)}
+              </div>
+              <input type="range" min={f.min||0} max={f.max} value={f.val}
+                onChange={e=>f.set(+e.target.value)}
+                style={{width:'100%',accentColor:C.GOLD}}/>
+              <div style={{fontSize:9,color:'#2e4858',fontFamily:'system-ui',marginTop:4}}>{f.note}</div>
+            </Card>
+          ))}
+        </div>
+
+        {/* KPIs */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:12}}>
+          {[
+            {l:'Total cotisé',v:totalCotis,c:'#205898'},
+            {l:'Total gvt',   v:totalGvt,  c:'#208060'},
+            {l:`REEI ×${levier.toFixed(1)}`,v:totalREEI,c:C.GOLD},
+          ].map((k,i)=>(
+            <div key={i} style={{background:`${k.c}18`,border:`1px solid ${k.c}40`,borderRadius:10,padding:'10px 12px'}}>
+              <div style={{fontSize:8,color:k.c,fontFamily:'system-ui',letterSpacing:1.2,marginBottom:3}}>{k.l.toUpperCase()}</div>
+              <div style={{fontSize:16,fontWeight:'bold',color:'#fff'}}>{$(k.v)}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* CONTENU ONGLETS */}
+        <div style={{background:'rgba(255,255,255,0.03)',border:`1px solid ${C.GOLD}20`,borderRadius:12,overflow:'hidden'}}>
+
+          {/* PLAN */}
+          {tab==='plan' && (
+            <div style={{overflowX:'auto',WebkitOverflowScrolling:'touch'}}>
+              <div style={{padding:'8px 12px',borderBottom:'1px solid rgba(255,255,255,0.06)',fontFamily:'system-ui',fontSize:9,color:'#406070'}}>
+                <span style={{color:C.T1}}>■ ×3</span> priorité  <span style={{color:C.T2,marginLeft:8}}>■ ×2</span> complément  <span style={{color:C.BCEI,marginLeft:8}}>■ BCEI</span> automatique
+              </div>
+              <table style={{width:'100%',borderCollapse:'collapse',fontFamily:'system-ui',fontSize:10,minWidth:700}}>
+                <thead>
+                  <tr style={{background:'rgba(255,255,255,0.07)'}}>
+                    {['An','Âge','Ctis.×3','Ctis.×2','Total cotis.','SCEI×3','SCEI×2','SCEI','BCEIc','BCEIr','BCEI','Gvt','Levier','Cumul'].map((h,j)=>(
+                      <th key={j} style={{padding:'7px 8px',textAlign:'right',color:j<=1?'#5080a0':j<=4?C.T1:j<=7?'#4080c0':j<=10?C.BCEI:'#406070',fontWeight:500,fontSize:8,whiteSpace:'nowrap'}}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {plan.map((r,i)=>(
+                    <tr key={i} style={{borderTop:'1px solid rgba(255,255,255,0.04)',background:r.hors?'rgba(180,50,20,0.06)':i%2===0?'transparent':'rgba(255,255,255,0.015)'}}>
+                      <td style={{padding:'6px 8px',textAlign:'right',color:C.GOLD,fontWeight:'bold'}}>{r.annee}</td>
+                      <td style={{padding:'6px 8px',textAlign:'right',color:r.age>49?'#c04828':'#406070'}}>{r.age}a</td>
+                      <td style={{padding:'6px 8px',textAlign:'right',color:r.cotis3>0?C.T1:'#1c2c38'}}>{r.cotis3>0?$(r.cotis3):'—'}</td>
+                      <td style={{padding:'6px 8px',textAlign:'right',color:r.cotis2>0?C.T2:'#1c2c38'}}>{r.cotis2>0?$(r.cotis2):'—'}</td>
+                      <td style={{padding:'6px 8px',textAlign:'right',color:'#c8d8e8',fontWeight:'bold',borderRight:'1px solid rgba(255,255,255,0.08)'}}>{$(r.cotis)}</td>
+                      <td style={{padding:'6px 8px',textAlign:'right',color:'#50c880'}}>{r.scei3>0?$(r.scei3):'—'}</td>
+                      <td style={{padding:'6px 8px',textAlign:'right',color:'#5090d0'}}>{r.scei2>0?$(r.scei2):'—'}</td>
+                      <td style={{padding:'6px 8px',textAlign:'right',color:C.GVT,fontWeight:'bold',borderRight:'1px solid rgba(255,255,255,0.08)'}}>{$(r.scei)}</td>
+                      <td style={{padding:'6px 8px',textAlign:'right',color:'#8878d8'}}>{r.bceiCour>0?$(r.bceiCour):'—'}</td>
+                      <td style={{padding:'6px 8px',textAlign:'right',color:'#b0a0f0'}}>{r.bceiReto>0?$(r.bceiReto):'—'}</td>
+                      <td style={{padding:'6px 8px',textAlign:'right',color:C.BCEI,fontWeight:'bold',borderRight:'1px solid rgba(255,255,255,0.08)'}}>{$(r.bcei)}</td>
+                      <td style={{padding:'6px 8px',textAlign:'right',color:'#c8d8e8',fontWeight:'bold'}}>{$(r.gvt)}</td>
+                      <td style={{padding:'6px 8px',textAlign:'right',color:r.levier>=3?C.GOLD:r.levier>=1.5?C.GVT:'#507080',fontWeight:'bold'}}>{r.cotis>0?`${r.levier.toFixed(1)}×`:'—'}</td>
+                      <td style={{padding:'6px 8px',textAlign:'right',color:'#507080'}}>{$(r.reeiCum)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr style={{background:`${C.GOLD}18`,borderTop:`2px solid ${C.GOLD}`}}>
+                    <td colSpan={4} style={{padding:'7px 8px',color:C.GOLD,fontWeight:'bold',textAlign:'right',fontSize:9}}>TOTAL {proj} ANS</td>
+                    <td style={{padding:'7px 8px',textAlign:'right',color:'#fff',fontWeight:'bold'}}>{$(totalCotis)}</td>
+                    <td colSpan={3} style={{padding:'7px 8px',textAlign:'right',color:C.GVT,fontWeight:'bold'}}>{$(plan.reduce((s,r)=>s+r.scei,0))}</td>
+                    <td colSpan={3} style={{padding:'7px 8px',textAlign:'right',color:C.BCEI,fontWeight:'bold'}}>{$(plan.reduce((s,r)=>s+r.bcei,0))}</td>
+                    <td style={{padding:'7px 8px',textAlign:'right',color:'#fff',fontWeight:'bold'}}>{$(totalGvt)}</td>
+                    <td style={{padding:'7px 8px',textAlign:'right',color:C.GOLD,fontWeight:'bold'}}>{levier.toFixed(1)}×</td>
+                    <td style={{padding:'7px 8px',textAlign:'right',color:C.GOLD,fontWeight:'bold',fontSize:13}}>{$(totalREEI)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+
+          {/* REVENUS */}
+          {tab==='revenu' && (
+            <div>
+              <div style={{padding:'10px 14px',borderBottom:'1px solid rgba(255,255,255,0.06)',display:'flex',flexWrap:'wrap',gap:6,fontFamily:'system-ui'}}>
+                <span style={{fontSize:9,color:'#5080a0',alignSelf:'center'}}>Tout à :</span>
+                {[[35000,'35k'],[45000,'45k'],[55000,'55k'],[80000,'80k'],[120000,'120k']].map(([v,l])=>(
+                  <button key={v} onClick={()=>setRevAns(Array(25).fill(v))} style={{
+                    padding:'5px 10px',borderRadius:5,cursor:'pointer',fontSize:10,
+                    background:revAns[0]===v?C.GOLD:'rgba(255,255,255,0.06)',
+                    border:`1px solid ${revAns[0]===v?C.GOLD:'rgba(255,255,255,0.15)'}`,
+                    color:revAns[0]===v?'#1a1a1a':'#7098b8',fontWeight:revAns[0]===v?'bold':'normal'
+                  }}>{l}</button>
+                ))}
+              </div>
+              <table style={{width:'100%',borderCollapse:'collapse',fontFamily:'system-ui',fontSize:11}}>
+                <thead>
+                  <tr style={{background:'rgba(255,255,255,0.06)'}}>
+                    {['An','Âge','Revenu net','','Taux','BCEI','→ suite'].map(h=>(
+                      <th key={h} style={{padding:'8px 10px',textAlign:h==='Revenu net'?'right':'center',color:'#5080a0',fontWeight:500,fontSize:9}}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({length:proj},(_,i)=>{
+                    const annee=ANNEE+i, ageCet=age+i;
+                    const rev=revAns[i]??35000;
+                    const d=droits(rev), b=bceiAn(rev);
+                    const bonif=rev<=SEUIL_BONIF;
+                    return (
+                      <tr key={i} style={{borderTop:'1px solid rgba(255,255,255,0.05)',background:i%2===0?'transparent':'rgba(255,255,255,0.02)'}}>
+                        <td style={{padding:'5px 10px',textAlign:'center',color:C.GOLD,fontWeight:'bold'}}>{i+1}</td>
+                        <td style={{padding:'5px 10px',textAlign:'center',color:ageCet>49?'#c04828':ageCet<=18?C.GOLD:'#6080a0'}}>{ageCet}a</td>
+                        <td style={{padding:'4px 8px',textAlign:'right'}}>
+                          <input type="number" value={rev}
+                            onChange={e=>setRevAn(i,Math.max(0,parseInt(e.target.value)||0))}
+                            style={{width:130,padding:'6px 10px',borderRadius:6,
+                              border:`1px solid ${bonif?'#1d705060':'#1858a060'}`,
+                              background:bonif?'rgba(29,112,80,0.18)':'rgba(24,88,160,0.18)',
+                              color:'#e0f0e8',fontFamily:'system-ui',fontSize:13,fontWeight:'bold',
+                              textAlign:'right',outline:'none'}}/>
+                        </td>
+                        <td style={{padding:'4px 6px'}}>
+                          <div style={{display:'flex',flexDirection:'column',gap:2}}>
+                            {[[-5000,'−5k'],[5000,'+5k']].map(([d2,l])=>(
+                              <button key={l} onClick={()=>setRevAn(i,Math.max(0,rev+d2))} style={{
+                                padding:'2px 6px',borderRadius:4,cursor:'pointer',fontSize:9,
+                                background:`${C.GOLD}15`,border:`1px solid ${C.GOLD}30`,color:C.GOLD,fontWeight:'bold'
+                              }}>{l}</button>
+                            ))}
+                          </div>
+                        </td>
+                        <td style={{padding:'5px 10px',textAlign:'center',fontSize:10,fontWeight:'bold',color:bonif?'#2d8a60':'#2060a0'}}>
+                          {ageCet>49?'🔴':bonif?'×3+×2':'×1'}
+                        </td>
+                        <td style={{padding:'5px 10px',textAlign:'center',fontSize:10,color:b>0?C.BCEI:'#404060',fontWeight:b>0?'bold':'normal'}}>
+                          {b>0?$(b):'—'}
+                        </td>
+                        <td style={{padding:'5px 8px',textAlign:'center'}}>
+                          <button onClick={()=>setRevAns(prev=>{const n=[...prev];for(let j=i;j<25;j++)n[j]=rev;return n;})} style={{
+                            padding:'4px 8px',borderRadius:5,cursor:'pointer',fontSize:9,
+                            background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.12)',color:'#6080a0'
+                          }}>→</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* RÉTRO */}
+          {tab==='retro' && (
+            <div style={{overflowX:'auto'}}>
+              <div style={{padding:'10px 14px',borderBottom:'1px solid rgba(255,255,255,0.06)',fontFamily:'system-ui',fontSize:10,color:'#406070'}}>
+                Pool ×3 : <strong style={{color:C.T1}}>{$(retro.pool3)} → {$(retro.scei3tot)} SCEI</strong> &nbsp;·&nbsp;
+                Pool ×2 : <strong style={{color:C.T2}}>{$(retro.pool2)} → {$(retro.scei2tot)} SCEI</strong> &nbsp;·&nbsp;
+                BCEI : <strong style={{color:C.BCEI}}>{$(retro.poolBCEI)}</strong>
+              </div>
+              <table style={{width:'100%',borderCollapse:'collapse',fontFamily:'system-ui',fontSize:11}}>
+                <thead><tr style={{background:'rgba(255,255,255,0.05)'}}>
+                  {['Année','Âge','Droits ×3','SCEI ×3','Droits ×2','SCEI ×2','BCEI','Total'].map(h=>(
+                    <th key={h} style={{padding:'7px 10px',textAlign:'right',color:'#406070',fontWeight:500,fontSize:9}}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {retro.lignes.map((r,i)=>(
+                    <tr key={i} style={{borderTop:'1px solid rgba(255,255,255,0.04)',background:i%2===0?'transparent':'rgba(255,255,255,0.02)'}}>
+                      <td style={{padding:'7px 10px',textAlign:'right',color:C.GOLD,fontWeight:'bold'}}>{r.annee}</td>
+                      <td style={{padding:'7px 10px',textAlign:'right',color:'#406070'}}>{r.age!=null?`${r.age}a`:'—'}</td>
+                      <td style={{padding:'7px 10px',textAlign:'right',color:C.T1}}>{r.r3>0?$(r.r3):'—'}</td>
+                      <td style={{padding:'7px 10px',textAlign:'right',color:C.T1,fontWeight:'bold'}}>{r.scei3>0?$(r.scei3):'—'}</td>
+                      <td style={{padding:'7px 10px',textAlign:'right',color:C.T2}}>{r.r2>0?$(r.r2):'—'}</td>
+                      <td style={{padding:'7px 10px',textAlign:'right',color:C.T2,fontWeight:'bold'}}>{r.scei2>0?$(r.scei2):'—'}</td>
+                      <td style={{padding:'7px 10px',textAlign:'right',color:C.BCEI}}>{$(r.bcei)}</td>
+                      <td style={{padding:'7px 10px',textAlign:'right',color:'#c8d8e8',fontWeight:'bold'}}>{$((r.scei3||0)+(r.scei2||0)+r.bcei)}</td>
+                    </tr>
+                  ))}
+                  <tr style={{background:`${C.GOLD}14`,borderTop:`2px solid ${C.GOLD}`}}>
+                    <td colSpan={2} style={{padding:'8px 10px',color:C.GOLD,fontWeight:'bold',textAlign:'right',fontSize:9}}>TOTAL</td>
+                    <td style={{padding:'8px 10px',textAlign:'right',color:C.T1,fontWeight:'bold'}}>{$(retro.pool3)}</td>
+                    <td style={{padding:'8px 10px',textAlign:'right',color:C.T1,fontWeight:'bold',fontSize:12}}>{$(retro.scei3tot)}</td>
+                    <td style={{padding:'8px 10px',textAlign:'right',color:C.T2,fontWeight:'bold'}}>{$(retro.pool2)}</td>
+                    <td style={{padding:'8px 10px',textAlign:'right',color:C.T2,fontWeight:'bold',fontSize:12}}>{$(retro.scei2tot)}</td>
+                    <td style={{padding:'8px 10px',textAlign:'right',color:C.BCEI,fontWeight:'bold',fontSize:12}}>{$(retro.poolBCEI)}</td>
+                    <td style={{padding:'8px 10px',textAlign:'right',color:C.GOLD,fontWeight:'bold',fontSize:14}}>{$(retro.scei3tot+retro.scei2tot+retro.poolBCEI)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* RÈGLES */}
+          {tab==='règles' && (
+            <div style={{padding:'14px'}}>
+              {[
+                {t:'SCEI ×3 — 300%',c:C.T1,items:['500$/an de droits → 1 500$ SCEI/an','Revenu ≤ 114 750$ (seuil 2025)','10 ans = 5 000$ droits → 15 000$ SCEI','Pour 10 500$ : cotiser 3 500$ (10 500÷3)','PRIORITÉ 1 · Max à vie : 70 000$']},
+                {t:'SCEI ×2 — 200%',c:C.T2,items:['1 000$/an de droits → 2 000$ SCEI/an','Taux 100% si revenu > 114 750$','10 ans = 10 000$ droits → 20 000$ SCEI','Cotis. pour tout : 10 000$','PRIORITÉ 2 · Plafond partagé ×3 : 10 500$/an']},
+                {t:'BCEI — Bon auto.',c:C.BCEI,items:['1 000$/an si revenu ≤ 37 487$','Partiel entre 37 487$ et 57 375$','Aucune cotisation requise','Max annuel avec report : 11 000$','Max à vie : 20 000$']},
+                {t:'Règles générales',c:'#407080',items:['REEI avant fin année des 59 ans','SCEI/BCEI jusqu\'à fin année des 49 ans','≤18 ans = revenu parental · ≥19 ans = propre','Report max : 10 ans de droits inutilisés','Cotis. personnelle max à vie : 200 000$']},
+              ].map((b,i)=>(
+                <div key={i} style={{background:`${b.c}10`,border:`1px solid ${b.c}28`,borderRadius:8,padding:'12px',marginBottom:10}}>
+                  <div style={{fontSize:9,color:b.c,fontWeight:'bold',letterSpacing:1.5,marginBottom:8,fontFamily:'system-ui'}}>{b.t.toUpperCase()}</div>
+                  {b.items.map((item,j)=>(
+                    <div key={j} style={{display:'flex',gap:6,marginBottom:5,lineHeight:1.4,fontFamily:'system-ui',fontSize:11}}>
+                      <span style={{color:b.c}}>·</span><span style={{color:'#7898a8'}}>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+              <div style={{padding:'8px 12px',background:'rgba(196,151,62,0.06)',border:'1px solid rgba(196,151,62,0.2)',borderRadius:8,fontFamily:'system-ui',fontSize:9,color:'#706028'}}>
+                Source : ARC canada.ca (déc. 2025) · Fourni à titre indicatif par RAM Québec Conseils Fiscaux Inc.
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* BARRE DE NAVIGATION BAS — style app mobile */}
+      <div style={{position:'fixed',bottom:0,left:0,right:0,background:'#0a1c2e',
+        borderTop:`2px solid ${C.GOLD}`,display:'flex',zIndex:100}}>
+        {TABS.map(t=>(
+          <button key={t.k} onClick={()=>setTab(t.k)} style={{
+            flex:1,padding:'10px 4px 8px',border:'none',cursor:'pointer',
+            background:tab===t.k?`${C.GOLD}20`:'transparent',
+            borderTop:tab===t.k?`2px solid ${C.GOLD}`:'2px solid transparent',
+            color:tab===t.k?C.GOLD:'#5080a0',fontFamily:'system-ui',fontSize:10,
+            fontWeight:tab===t.k?'bold':'normal',touchAction:'manipulation',
+            transition:'all 0.15s',
+          }}>{t.l}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+  </script>
+</body>
+</html>
