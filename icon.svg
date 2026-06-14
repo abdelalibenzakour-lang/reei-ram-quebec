@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#0a1c2e"/>
+  <rect x="30" y="30" width="452" height="452" rx="60" fill="#0d2238"/>
+  <rect x="70" y="70" width="80" height="370" rx="10" fill="#c4973e"/>
+  <rect x="70" y="180" width="280" height="70" rx="10" fill="#c4973e"/>
+  <rect x="70" y="290" width="230" height="70" rx="10" fill="#c4973e"/>
+  <text x="256" y="488" text-anchor="middle" font-family="Georgia,serif" font-size="52" fill="#c4973e" opacity="0.7">REEI</text>
+</svg>
