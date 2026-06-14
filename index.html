@@ -73,7 +73,7 @@
   </script>
 
   <script type="text/babel">
-const { useState, useMemo, useCallback, useEffect } = React;
+const { useState, useMemo, useCallback } = React;
 
 // ─── RÈGLES ARC 2025 ──────────────────────────────────────────────────────────
 const ANNEE        = 2025;
@@ -178,11 +178,7 @@ function App() {
   const [manuel, setManuel] = useState(false);
   const [cotisM, setCotisM] = useState(1500);
   const [revAns, setRevAns] = useState(() => Array(25).fill(35000));
-  const [androidInstall, setAndroidInstall] = useState(false);
-
-  useEffect(()=>{
-    window.addEventListener('beforeinstallprompt',()=>setAndroidInstall(true));
-  },[]);
+  const [showTip, setShowTip] = useState(false);
 
   const setRevAn = useCallback((i,val)=>{
     setRevAns(prev=>{const n=[...prev];n[i]=val;return n;});
@@ -214,13 +210,24 @@ function App() {
         <div style={{fontSize:9,color:'#304858',fontFamily:'system-ui',marginTop:2}}>
           ARC 2025 · Pool ×3 prioritaire · Max 10 500$/an SCEI
         </div>
-        {androidInstall && (
-          <button onClick={async()=>{
-            if(window.deferredPrompt){await window.deferredPrompt.prompt();setAndroidInstall(false);}
-          }} style={{marginTop:6,padding:'5px 12px',borderRadius:6,background:`${C.GOLD}20`,
-            border:`1px solid ${C.GOLD}`,color:C.GOLD,fontSize:10,fontFamily:'system-ui',cursor:'pointer'}}>
-            📲 Installer l'app
-          </button>
+        <button onClick={()=>setShowTip(v=>!v)} style={{
+          marginTop:6,padding:'5px 12px',borderRadius:6,cursor:'pointer',
+          background:`${C.GOLD}20`,border:`1px solid ${C.GOLD}`,
+          color:C.GOLD,fontSize:10,fontFamily:'system-ui',fontWeight:'bold'
+        }}>📲 Installer l'app</button>
+        {showTip && (
+          <div style={{marginTop:6,padding:'8px 12px',background:'#0d2238',border:`1px solid ${C.GOLD}`,
+            borderRadius:8,fontFamily:'system-ui',fontSize:11,color:'#b8c8d8',lineHeight:1.7}}>
+            <strong style={{color:C.GOLD}}>Android Chrome :</strong><br/>
+            Appuie sur <strong style={{color:C.GOLD}}>⋮</strong> (3 points) → <strong style={{color:C.GOLD}}>"Ajouter à l'écran d'accueil"</strong>
+            <br/><br/>
+            <strong style={{color:C.GOLD}}>iPhone Safari :</strong><br/>
+            Appuie sur <strong style={{color:C.GOLD}}>⎋ Partager</strong> → <strong style={{color:C.GOLD}}>"Sur l'écran d'accueil"</strong>
+            <br/><br/>
+            <button onClick={()=>setShowTip(false)} style={{padding:'4px 12px',borderRadius:5,
+              background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.15)',
+              color:'#7098b8',cursor:'pointer',fontFamily:'system-ui',fontSize:10}}>Fermer</button>
+          </div>
         )}
         <a href="https://raw.githubusercontent.com/abdelalibenzakour-lang/reei-ram-quebec/main/index.html" download="REEI_RAM_Quebec.html"
           style={{
