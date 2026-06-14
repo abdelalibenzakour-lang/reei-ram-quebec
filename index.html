@@ -10,31 +10,8 @@
   <meta name="theme-color" content="#0a1c2e">
   <title>Planificateur REEI — RAM Québec</title>
 
-  <!-- Manifest PWA inline via JS -->
-  <script>
-    const manifest = {
-      name: "Planificateur REEI — RAM Québec",
-      short_name: "REEI RAM",
-      description: "Calculateur SCEI, BCEI et cotisations REEI — RAM Québec Conseils Fiscaux",
-      start_url: "./",
-      display: "standalone",
-      background_color: "#070c14",
-      theme_color: "#0a1c2e",
-      orientation: "any",
-      icons: [
-        { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%230a1c2e'/%3E%3Crect x='30' y='30' width='452' height='452' rx='60' fill='%230d2238'/%3E%3Cpath d='M80 460 L80 60 L160 60 L160 460 Z' fill='%23c4973e'/%3E%3Cpath d='M80 200 L320 200 Q420 200 420 280 Q420 360 320 360 L160 360 L160 280 L300 280 Q340 280 340 260 Q340 240 300 240 L80 240 Z' fill='%23c4973e'/%3E%3Ctext x='256' y='490' text-anchor='middle' font-family='Georgia' font-size='40' fill='%23c4973e' opacity='0.6'%3EREEI%3C/text%3E%3C/svg%3E", sizes: "512x512", type: "image/svg+xml", purpose: "any maskable" }
-      ]
-    };
-    const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-    const manifestURL = URL.createObjectURL(blob);
-    document.write('<link rel="manifest" href="' + manifestURL + '">');
-
-    // Apple touch icon
-    const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="80" fill="#0a1c2e"/><rect x="30" y="30" width="452" height="452" rx="60" fill="#0d2238"/><path d="M80 460 L80 60 L160 60 L160 460 Z" fill="#c4973e"/><path d="M80 200 L320 200 Q420 200 420 280 Q420 360 320 360 L160 360 L160 280 L300 280 Q340 280 340 260 Q340 240 300 240 L80 240 Z" fill="#c4973e"/><text x="256" y="490" text-anchor="middle" font-family="Georgia" font-size="40" fill="#c4973e" opacity="0.6">REEI</text></svg>`;
-    const iconBlob = new Blob([svgIcon], {type: 'image/svg+xml'});
-    const iconURL = URL.createObjectURL(iconBlob);
-    document.write('<link rel="apple-touch-icon" href="' + iconURL + '">');
-  </script>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icon.svg">
 
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -72,25 +49,8 @@
   </div>
 
   <script>
-    // Service Worker pour fonctionnement hors-ligne
     if ('serviceWorker' in navigator) {
-      const swCode = `
-        const CACHE = 'reei-ram-v1';
-        const ASSETS = [
-          'https://unpkg.com/react@18/umd/react.production.min.js',
-          'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
-          'https://unpkg.com/@babel/standalone/babel.min.js'
-        ];
-        self.addEventListener('install', e => {
-          e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
-        });
-        self.addEventListener('fetch', e => {
-          e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
-        });
-      `;
-      const swBlob = new Blob([swCode], {type: 'application/javascript'});
-      const swURL = URL.createObjectURL(swBlob);
-      navigator.serviceWorker.register(swURL).catch(()=>{});
+      navigator.serviceWorker.register('./sw.js').catch(()=>{});
     }
 
     // Bouton install Android
