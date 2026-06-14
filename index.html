@@ -262,23 +262,15 @@ function App() {
             📲 Installer l'app
           </button>
         )}
-        <button onClick={()=>{
-          const html = document.documentElement.outerHTML;
-          const blob = new Blob([html], {type:'text/html'});
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'REEI_RAM_Quebec.html';
-          a.click();
-          URL.revokeObjectURL(url);
-        }} style={{
-          marginTop:6, marginLeft:8, padding:'5px 14px', borderRadius:6, cursor:'pointer',
-          background:'rgba(29,112,80,0.2)', border:'1px solid #1d7050',
-          color:'#2d9060', fontSize:10, fontFamily:'system-ui', fontWeight:'bold',
-          display:'inline-flex', alignItems:'center', gap:4
-        }}>
+        <a href="https://raw.githubusercontent.com/abdelalibenzakour-lang/reei-ram-quebec/main/index.html" download="REEI_RAM_Quebec.html"
+          style={{
+            marginTop:6, marginLeft:8, padding:'5px 14px', borderRadius:6, cursor:'pointer',
+            background:'rgba(29,112,80,0.2)', border:'1px solid #1d7050',
+            color:'#2d9060', fontSize:10, fontFamily:'system-ui', fontWeight:'bold',
+            display:'inline-flex', alignItems:'center', gap:4, textDecoration:'none'
+          }}>
           ⬇ Sauvegarder l'app
-        </button>
+        </a>
       </div>
 
       <div style={{padding:'12px 14px',maxWidth:900,margin:'0 auto'}}>
