@@ -379,7 +379,7 @@ function App() {
               <table style={{width:'100%',borderCollapse:'collapse',fontFamily:'system-ui',fontSize:11}}>
                 <thead>
                   <tr style={{background:'rgba(255,255,255,0.06)'}}>
-                    {['An','Âge','Revenu net','','Taux','BCEI','→ suite'].map(h=>(
+                    {['An','Âge','Revenu net','','Taux','BCEI'].map(h=>(
                       <th key={h} style={{padding:'8px 10px',textAlign:h==='Revenu net'?'right':'center',color:'#5080a0',fontWeight:500,fontSize:9}}>{h}</th>
                     ))}
                   </tr>
@@ -419,12 +419,7 @@ function App() {
                         <td style={{padding:'5px 10px',textAlign:'center',fontSize:10,color:b>0?C.BCEI:'#404060',fontWeight:b>0?'bold':'normal'}}>
                           {b>0?$(b):'—'}
                         </td>
-                        <td style={{padding:'5px 8px',textAlign:'center'}}>
-                          <button onClick={()=>setRevAns(prev=>{const n=[...prev];for(let j=i;j<25;j++)n[j]=rev;return n;})} style={{
-                            padding:'4px 8px',borderRadius:5,cursor:'pointer',fontSize:9,
-                            background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.12)',color:'#6080a0'
-                          }}>→</button>
-                        </td>
+
                       </tr>
                     );
                   })}
